@@ -95,13 +95,3 @@ Color detection concepts inspired by various open-source colorbot projects.
 
 ---
 
-Nếu bạn muốn, mình có thể **viết lại README này ở level GitHub pro (10/10)**:  
-
-- có **badges**
-- **ảnh demo**
-- **GIF gameplay**
-- **table cấu hình**
-- **diagram hoạt động của colorbot**
-
-→ Nhìn giống repo **2000⭐ trên GitHub**.
-::contentReference[oaicite:2]{index=2}
