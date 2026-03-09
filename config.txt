@@ -1,0 +1,8 @@
+Phim kich hoat: x1
+Do nhay mau: 120
+FOV quet ngang: 65
+FOV quet doc: 30
+Mau dich: purple
+Do muot (Cang cao cang muot): 12
+offset Y: 4
+offset X: 0

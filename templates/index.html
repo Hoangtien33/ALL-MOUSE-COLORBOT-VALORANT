@@ -1,0 +1,998 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vn.dev Aimbot All Mouse</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Space Grotesk', 'Orbitron', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        }
+
+        body {
+            background: radial-gradient(1200px 700px at 20% 10%, #1b0b0b 0%, #0b0b0b 45%, #070707 100%);
+            color: #f6f6f6;
+            overflow-y: auto;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        #canvasOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.35;
+            pointer-events: none;
+        }
+
+        #cursorCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .container {
+            position: relative;
+            max-width: 720px;
+            margin: 24px auto;
+            padding: 28px 28px 22px;
+            background: linear-gradient(180deg, rgba(15,15,18,0.8), rgba(15,15,18,0.6));
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow:
+                0 10px 40px rgba(255, 55, 55, 0.12),
+                inset 0 1px 0 rgba(255,255,255,0.06),
+                inset 0 0 40px rgba(255, 50, 50, 0.045);
+            backdrop-filter: blur(14px) saturate(120%);
+            transform-style: preserve-3d;
+        }
+
+        .container::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            border-radius: 22px;
+            padding: 1px;
+            background: conic-gradient(from 120deg, #ff2a2a, #ff9a3a, #ff2a7a, #6a39ff, #2affd5, #ff2a2a);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+            animation: borderRotate 12s linear infinite;
+            opacity: 0.25;
+            pointer-events: none;
+        }
+
+        @keyframes borderRotate { to { transform: rotate(360deg); } }
+
+        h1 {
+            text-align: center;
+            background: linear-gradient(90deg, #ffd1d1, #ff6666, #ffd1d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 14px;
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #e2e2e2;
+            opacity: 0.75;
+            font-size: 13.5px;
+            margin-bottom: 22px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .preset-bar {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #ff6666;
+            letter-spacing: 1px;
+            font-size: 16px;
+        }
+
+        input, select {
+            padding: 12px 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            background: linear-gradient(180deg, rgba(22,22,26,0.9), rgba(20,20,24,0.75));
+            color: #f2f2f2;
+            font-size: 15.5px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.04s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+            background-repeat: no-repeat;
+            background-image: linear-gradient(90deg, rgba(255,120,120,0.85), rgba(255,70,70,0.85));
+            background-position: 0 100%;
+            background-size: 0% 2px;
+        }
+
+        select, select option {
+            background-color: #141418;
+            color: #f2f2f2;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #ff7a7a;
+            box-shadow: 0 0 0 4px rgba(255, 82, 82, 0.15), 0 0 14px rgba(255, 64, 64, 0.1);
+            background-size: 100% 2px;
+        }
+
+        .focus-ring {
+            box-shadow: 0 0 0 4px rgba(255, 82, 82, 0.18), 0 0 24px rgba(255, 64, 64, 0.18) !important;
+            transition: box-shadow 220ms ease;
+        }
+        .pulse {
+            animation: fieldPulse 420ms ease-out;
+        }
+        @keyframes fieldPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 100, 100, 0.0); }
+            40% { box-shadow: 0 0 0 6px rgba(255, 100, 100, 0.20); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 100, 100, 0.0); }
+        }
+
+        button {
+            padding: 12px;
+            background: linear-gradient(45deg, #ff3333, #ff7a7a);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 24px rgba(255, 82, 82, 0.25);
+        }
+
+        button:hover {
+            background: linear-gradient(45deg, #ff8a8a, #ff3a3a);
+            transform: translateY(-2px);
+            box-shadow: 0 14px 28px rgba(255, 82, 82, 0.35);
+        }
+
+        .btn-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-ripple:active {
+            transform: translateY(0) scale(0.985);
+            box-shadow: 0 0 12px #ff3333;
+        }
+        .btn-ripple span.rp {
+            position: absolute;
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 600ms linear;
+            background-color: rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+        }
+        @keyframes ripple {
+            to { transform: scale(4); opacity: 0; }
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background:
+                radial-gradient(120px 40px at 10% -20%, rgba(255,80,80,0.25), transparent 60%),
+                linear-gradient(180deg, rgba(16,16,18,0.9), rgba(16,16,18,0.75));
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #f7fffb;
+            padding: 14px 18px;
+            border-radius: 12px;
+            box-shadow: 0 10px 26px rgba(51,255,136,0.18);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        #toast.show { opacity: 1; transform: translateY(0); }
+        #toast.error { border-color: #ff5555; color: #ffecec; box-shadow: 0 0 10px rgba(255,85,85,0.3); }
+
+        #audioControls {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 1200;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(180deg, rgba(18,18,22,0.9), rgba(18,18,22,0.7));
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 8px 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            backdrop-filter: blur(10px);
+        }
+        #btnPlayPause {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+        #volumeSlider {
+            width: 140px;
+            accent-color: #ff6b6b;
+        }
+        #volLabel { font-size: 13px; opacity: 0.85; }
+        #audioPlayer { position: fixed; left: -9999px; width: 0; height: 0; }
+        #speakerIcon { filter: drop-shadow(0 2px 6px rgba(255,80,80,0.35)); }
+
+        #themeControls {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 1200;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(180deg, rgba(18,18,22,0.9), rgba(18,18,22,0.7));
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 8px 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            backdrop-filter: blur(10px);
+        }
+        #themeControls label { font-size: 12.5px; opacity: 0.85; }
+        #themeSelect {
+            background: #141418;
+            color: #eee;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 6px 8px;
+        }
+
+        #unmuteHint {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1200;
+            background: linear-gradient(180deg, rgba(18,18,22,0.95), rgba(18,18,22,0.8));
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #e8fff5;
+            padding: 10px 12px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            backdrop-filter: blur(8px);
+            display: none;
+        }
+
+        .info {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #ff6666;
+            opacity: 0.9;
+        }
+
+        /* Status Popup Styles */
+        .status-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 1px solid #ff3333;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 8px 32px rgba(255, 51, 51, 0.3);
+            z-index: 1000;
+            min-width: 280px;
+            backdrop-filter: blur(10px);
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .status-popup.show {
+            transform: translateX(0);
+        }
+
+        .status-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+        }
+
+        .status-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            position: relative;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.working {
+            background: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .status-indicator.updating {
+            background: #ffaa00;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+        }
+
+        .status-indicator.testing {
+            background: #ff3333;
+            box-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .status-text {
+            flex: 1;
+        }
+
+        .status-title {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 2px;
+            font-weight: 500;
+        }
+
+        .status-value {
+            font-size: 14px;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .status-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .status-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+            
+            .status-popup {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                min-width: auto;
+            }
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <canvas id="canvasOverlay"></canvas>
+    <canvas id="cursorCanvas"></canvas>
+    <div id="audioControls" aria-label="Music player">
+        <span id="speakerIcon" title="Volume" aria-hidden="true">🔊</span>
+        <input id="volumeSlider" type="range" min="0" max="100" value="60" aria-label="Volume" />
+        <span id="volLabel">60%</span>
+        <button id="btnPlayPause" style="display:none"></button>
+    </div>
+    <div id="yt-player"></div>
+    <div id="unmuteHint">Nhấn vào trang hoặc kéo thanh âm lượng để bật tiếng</div>
+    <div class="container">
+        <h1>vn.dev Aimbot All Mouse</h1>
+        <div class="subtitle">Tinh chỉnh cấu hình nhanh, hiển thị tức thời</div>
+        <div class="preset-bar">
+            <button type="button" id="btnLegit" class="btn-ripple">Config Legit</button>
+            <button type="button" id="btnRage" class="btn-ripple">Config Rage</button>
+            <button type="button" id="btnHideConsole" class="btn-ripple">Ẩn Console</button>
+        </div>
+        <form id="configForm" action="/save" method="POST">
+            <label for="phimKichHoat">Phím kích hoạt:</label>
+            <select id="phimKichHoat" name="Phim kich hoat">
+                <option value="x1" {{ 'selected' if config.get('Phim kich hoat')=='x1' else '' }}>x1 (Mouse Side Button)</option>
+                <option value="alt" {{ 'selected' if config.get('Phim kich hoat')=='alt' else '' }}>Alt</option>
+                <option value="ctrl" {{ 'selected' if config.get('Phim kich hoat')=='ctrl' else '' }}>Ctrl</option>
+                <option value="shift" {{ 'selected' if config.get('Phim kich hoat')=='shift' else '' }}>Shift</option>
+                <option value="chuot_trai" {{ 'selected' if config.get('Phim kich hoat')=='chuot_trai' else '' }}>Chuột trái</option>
+                <option value="chuot_phai" {{ 'selected' if config.get('Phim kich hoat')=='chuot_phai' else '' }}>Chuột phải</option>
+                <option value="x2" {{ 'selected' if config.get('Phim kich hoat')=='x2' else '' }}>x2</option>
+                <option value="f1" {{ 'selected' if config.get('Phim kich hoat')=='f1' else '' }}>F1</option>
+                <option value="f2" {{ 'selected' if config.get('Phim kich hoat')=='f2' else '' }}>F2</option>
+                <option value="space" {{ 'selected' if config.get('Phim kich hoat')=='space' else '' }}>Space</option>
+                <option value="none" {{ 'selected' if config.get('Phim kich hoat')=='none' else '' }}>None</option>
+            </select>
+
+
+
+
+            <label for="doNhayMau">Độ nhạy màu (0-255):</label>
+            <input type="number" id="doNhayMau" name="Do nhay mau" value="{{ config.get('Do nhay mau', '120') }}" min="0" max="255">
+
+            <label for="fovNgang">FOV quét ngang:</label>
+            <input type="number" id="fovNgang" name="FOV quet ngang" value="{{ config.get('FOV quet ngang', '65') }}" min="1">
+
+            <label for="fovDoc">FOV quét dọc:</label>
+            <input type="number" id="fovDoc" name="FOV quet doc" value="{{ config.get('FOV quet doc', '30') }}" min="1">
+
+            <label for="mauDich">Màu đích:</label>
+            <select id="mauDich" name="Mau dich">
+                <option value="purple" {{ 'selected' if config.get('Mau dich')=='purple' else '' }}>Purple (Tím)</option>
+                <option value="yellow" {{ 'selected' if config.get('Mau dich')=='yellow' else '' }}>Yellow (Vàng)</option>
+                <option value="red" {{ 'selected' if config.get('Mau dich')=='red' else '' }}>Red (Đỏ)</option>
+            </select>
+
+            <label for="doMuot">Độ mượt (Càng cao càng mượt):</label>
+            <input type="number" id="doMuot" name="Do muot (Cang cao cang muot)" value="{{ config.get('Do muot (Cang cao cang muot)', '12') }}" min="1">
+
+            <label for="offsetY">Offset Y:</label>
+            <input type="number" id="offsetY" name="offset Y" value="{{ config.get('offset Y', '4') }}">
+
+            <label for="offsetX">Offset X:</label>
+            <input type="number" id="offsetX" name="offset X" value="{{ config.get('offset X', '0') }}">
+
+            <button type="submit" class="btn-ripple">Save Config</button>
+        </form>
+        <p class="info">Cấu hình sẽ được lưu trực tiếp vào config.txt<br>DEV: DNTT | Discord: discord.gg/vietnamdev</p>
+    </div>
+    <div id="toast"></div>
+    
+    <!-- Status Popup -->
+    <div id="statusPopup" class="status-popup">
+        <div class="status-content">
+            <div class="status-icon">
+                <div class="status-indicator working"></div>
+            </div>
+            <div class="status-text">
+                <div class="status-title">Status hiện tại</div>
+                <div class="status-value">Working (undetected)</div>
+            </div>
+            <button class="status-close" onclick="closeStatusPopup()">&times;</button>
+        </div>
+    </div>
+
+    <script>
+        // Shader background using Three.js
+        const scene = new THREE.Scene();
+        const camera = new THREE.Camera();
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 },
+                resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                mouse: { value: new THREE.Vector2(0.5, 0.5) }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                precision highp float;
+                uniform float time;
+                uniform vec2 resolution;
+                uniform vec2 mouse; 
+                varying vec2 vUv;
+
+                float hash(vec2 p){
+                    p = vec2(dot(p, vec2(127.1,311.7)), dot(p, vec2(269.5,183.3)));
+                    return -1.0 + 2.0*fract(sin(p)*43758.5453123);
+                }
+                float noise(in vec2 p){
+                    vec2 i = floor(p);
+                    vec2 f = fract(p);
+                    vec2 u = f*f*(3.0-2.0*f);
+                    return mix(mix(hash(i + vec2(0.0,0.0)), hash(i + vec2(1.0,0.0)), u.x),
+                               mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), u.x), u.y);
+                }
+
+                void main(){
+                    vec2 uv = (gl_FragCoord.xy / resolution.xy);
+                    vec2 p = uv*3.0;
+                    float t = time*0.12;
+                    float n = 0.0;
+                    n += 0.55*noise(p + vec2(t, t*0.7));
+                    n += 0.25*noise(p*1.8 + vec2(-t*0.4, t*0.9));
+                    n += 0.15*noise(p*3.2 + vec2(t*0.8, -t*0.6));
+                    n = smoothstep(0.2, 0.9, n);
+
+                    vec2 m = mouse;
+                    vec2 par = (uv - 0.5) * (m - 0.5) * 0.8;
+                    float vig = smoothstep(1.1, 0.3, length(uv - 0.5 + par));
+
+                    vec3 a = vec3(0.08, 0.01, 0.01);
+                    vec3 b = vec3(0.75, 0.20, 0.20);
+                    vec3 c = vec3(0.90, 0.18, 0.45);
+                    vec3 d = vec3(1.00, 0.72, 0.45);
+                    vec3 grad = a + b*cos(6.28318*(c* (n + uv.x*0.15 + t*0.05) + d));
+
+                    vec3 col = mix(grad, vec3(0.05,0.03,0.05), 0.15) * vig;
+                    gl_FragColor = vec4(col, 0.55);
+                }
+            `,
+            transparent: true
+        });
+
+        const geometry = new THREE.PlaneGeometry(2, 2);
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        // Shader overlay thứ hai: grid neon mềm động
+        const canvasOverlay = document.getElementById('canvasOverlay');
+        const renderer2 = new THREE.WebGLRenderer({ canvas: canvasOverlay, alpha: true, antialias: true });
+        renderer2.setSize(window.innerWidth, window.innerHeight);
+        const scene2 = new THREE.Scene();
+        const camera2 = new THREE.Camera();
+        const mat2 = new THREE.ShaderMaterial({
+            uniforms: { time: { value: 0.0 }, res: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) } },
+            vertexShader: `void main(){ gl_Position = vec4(position, 1.0); }`,
+            fragmentShader: `
+                precision highp float; uniform float time; uniform vec2 res;
+                void main(){
+                    vec2 uv = (gl_FragCoord.xy/res.xy)-0.5;
+                    uv.x *= res.x/res.y;
+                    float s = 0.5 + 0.5*sin(time*0.4);
+                    vec2 g = uv*24.0;
+                    vec2 f = fract(g)-0.5;
+                    float d = min(abs(f.x), abs(f.y));
+                    float glow = 0.02/(d+0.02);
+                    vec3 col = vec3(0.9,0.25,0.35)*glow*0.08*s;
+                    gl_FragColor = vec4(col, 0.35);
+                }
+            `,
+            transparent: true
+        });
+        const mesh2 = new THREE.Mesh(new THREE.PlaneGeometry(2,2), mat2); scene2.add(mesh2);
+
+        function animate() {
+            material.uniforms.time.value += 0.9;
+            renderer.render(scene, camera);
+            mat2.uniforms.time.value += 1.0;
+            renderer2.render(scene2, camera2);
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            material.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+            renderer2.setSize(window.innerWidth, window.innerHeight);
+            mat2.uniforms.res.value.set(window.innerWidth, window.innerHeight);
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = 1.0 - e.clientY / window.innerHeight;
+            material.uniforms.mouse.value.set(x, y);
+        });
+
+        // Lưu qua AJAX để không reload trang
+        const output = document.getElementById('configOutput');
+        const form = document.getElementById('configForm');
+        form.addEventListener('submit', async (e)=>{
+            e.preventDefault();
+            const fd = new FormData(form);
+            const params = new URLSearchParams();
+            fd.forEach((v,k)=> params.append(k, v));
+            try{
+                const res = await fetch('/save', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString()
+                });
+                if(res.ok){
+                    showToast('Lưu cấu hình thành công!');
+                } else {
+                    showToast('Lỗi khi lưu cấu hình!', true);
+                }
+            }catch(err){
+                showToast('Không thể kết nối máy chủ!', true);
+            }
+        });
+
+        // Ripple effect cho tất cả nút có class btn-ripple
+        document.querySelectorAll('.btn-ripple').forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const ripple = document.createElement('span');
+                ripple.className = 'rp';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.style.width = ripple.style.height = Math.max(rect.width, rect.height) + 'px';
+                this.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+
+        // Toast thông báo
+        const toast = document.getElementById('toast');
+        function showToast(message, isError = false) {
+            toast.textContent = message;
+            toast.classList.toggle('error', !!isError);
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // Hiệu ứng con trỏ: đuôi sao bám theo và nổ khi click
+        const cc = document.getElementById('cursorCanvas');
+        const ctx = cc.getContext('2d');
+        let particles = [];
+        function resizeCC(){ cc.width = innerWidth; cc.height = innerHeight; }
+        window.addEventListener('resize', resizeCC); resizeCC();
+
+        let mouseX = innerWidth/2, mouseY = innerHeight/2;
+        const trail = Array.from({length: 16}, () => ({x: mouseX, y: mouseY}));
+        window.addEventListener('pointermove', (e)=>{ mouseX = e.clientX; mouseY = e.clientY; });
+        window.addEventListener('click', (e)=>{
+            const count = 12;
+            for(let i=0;i<count;i++){
+                const angle = Math.random()*Math.PI*2;
+                const speed = 1.2+Math.random()*2.0;
+                particles.push({
+                    x: e.clientX,
+                    y: e.clientY,
+                    vx: Math.cos(angle)*speed,
+                    vy: Math.sin(angle)*speed,
+                    life: 22+Math.random()*12,
+                    hue: 0| (350 + Math.random()*30)
+                });
+            }
+        });
+        function tick(){
+            ctx.clearRect(0,0,cc.width,cc.height);
+
+            trail[0].x += (mouseX - trail[0].x) * 0.35;
+            trail[0].y += (mouseY - trail[0].y) * 0.35;
+            for(let i=1;i<trail.length;i++){
+                trail[i].x += (trail[i-1].x - trail[i].x) * 0.35;
+                trail[i].y += (trail[i-1].y - trail[i].y) * 0.35;
+            }
+            for(let i=0;i<trail.length;i++){
+                const p = trail[i];
+                const t = 1 - i / trail.length;
+                ctx.fillStyle = `rgba(255, 120, 120, ${0.25*t})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3.5*t, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            particles = particles.filter(p=>p.life>0);
+            for(const p of particles){
+                p.life -= 1;
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.02;
+                ctx.fillStyle = `hsla(${p.hue},100%,60%,${Math.max(0,p.life/36)})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 1.8, 0, Math.PI*2);
+                ctx.fill();
+            }
+            requestAnimationFrame(tick);
+        }
+        tick();
+
+        // Hiệu ứng khi click/focus vào ô nhập
+        const fields = document.querySelectorAll('input, select');
+        let audioCtx = null;
+        function getAudioCtx(){
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+        function playBlip(freq = 1100, duration = 0.06, gain = 0.08){
+            try {
+                const ctx = getAudioCtx();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const amp = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                amp.gain.setValueAtTime(0.0001, now);
+                amp.gain.exponentialRampToValueAtTime(gain, now + 0.01);
+                amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+                osc.connect(amp).connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + duration + 0.02);
+            } catch (e) { /* ignore */ }
+        }
+        fields.forEach(el => {
+            el.addEventListener('focus', () => {
+                el.classList.add('focus-ring');
+                el.classList.add('pulse');
+                setTimeout(()=> el.classList.remove('pulse'), 450);
+                playBlip(1250, 0.08, 0.12);
+            });
+            el.addEventListener('blur', () => {
+                el.classList.remove('focus-ring');
+            });
+            el.addEventListener('click', () => {
+                el.classList.add('pulse');
+                setTimeout(()=> el.classList.remove('pulse'), 420);
+                playBlip(950, 0.08, 0.18);
+            });
+        });
+
+        // YouTube IFrame API
+        const YT_PLAYLIST_URL = 'https://www.youtube.com/watch?v=AhC2SbKd-bY&list=RDAhC2SbKd-bY&start_radio=1';
+        const YT_VIDEO_ID = 'AhC2SbKd-bY';
+        let ytPlayer = null;
+        const btnPlayPause = document.getElementById('btnPlayPause');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volLabel = document.getElementById('volLabel');
+
+        function loadYouTubeAPI(){
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            document.body.appendChild(tag);
+        }
+        loadYouTubeAPI();
+
+        window.onYouTubeIframeAPIReady = function(){
+            ytPlayer = new YT.Player('yt-player', {
+                height: '0', width: '0', videoId: YT_VIDEO_ID,
+                playerVars: {
+                    autoplay: 1,
+                    controls: 0,
+                    disablekb: 1,
+                    modestbranding: 1,
+                    rel: 0,
+                    playsinline: 1,
+                    listType: 'playlist',
+                    list: 'RDAhC2SbKd-bY',
+                    loop: 1,
+                    mute: 1
+                },
+                events: {
+                    onReady: (e)=>{
+                        const savedVol = +localStorage.getItem('ui_volume') || 60;
+                        volumeSlider.value = savedVol;
+                        volLabel.textContent = savedVol + '%';
+                        try {
+                            ytPlayer.mute();
+                            ytPlayer.playVideo();
+                        } catch(_){}
+                        const unlock = ()=>{
+                            try {
+                                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                                ytPlayer.unMute();
+                                ytPlayer.setVolume(+volumeSlider.value || 60);
+                                ytPlayer.playVideo();
+                            } catch(_){}
+                            const hintEl = document.getElementById('unmuteHint');
+                            if (hintEl) hintEl.style.display = 'none';
+                            window.removeEventListener('pointerdown', unlock);
+                            window.removeEventListener('keydown', unlock);
+                        };
+                        const hintEl = document.getElementById('unmuteHint');
+                        if (hintEl) hintEl.style.display = 'block';
+                        window.addEventListener('pointerdown', unlock, { once: true });
+                        window.addEventListener('keydown', unlock, { once: true });
+                    },
+                    onStateChange: (ev)=>{
+                        if (ev.data === YT.PlayerState.ENDED) {
+                            try { ytPlayer.playVideo(); } catch(_){ }
+                        }
+                    }
+                }
+            });
+        }
+
+        function togglePlay(){
+            if(!ytPlayer) return;
+            const state = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : -1;
+            if(state !== 1){
+                try { ytPlayer.playVideo(); } catch(_){}
+                btnPlayPause.textContent = '⏸';
+            } else {
+                try { ytPlayer.pauseVideo(); } catch(_){}
+                btnPlayPause.textContent = '▶';
+            }
+        }
+        btnPlayPause.addEventListener('click', (e)=>{
+            e.preventDefault();
+            togglePlay();
+        });
+        volumeSlider.addEventListener('input', ()=>{
+            const v = +volumeSlider.value;
+            volLabel.textContent = v + '%';
+            localStorage.setItem('ui_volume', String(v));
+            try {
+                if(ytPlayer){
+                    ytPlayer.unMute();
+                    ytPlayer.setVolume(v);
+                    const st = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : -1;
+                    if (st !== 1) ytPlayer.playVideo();
+                }
+            } catch(_){ }
+        });
+
+        // Preset buttons: Legit & Rage
+        const btnLegit = document.getElementById('btnLegit');
+        const btnRage = document.getElementById('btnRage');
+        const btnHideConsole = document.getElementById('btnHideConsole');
+        function applyPreset(p){
+            document.getElementById('phimKichHoat').value = p.hk;
+            document.getElementById('doNhayMau').value = p.ct;
+            document.getElementById('fovNgang').value = p.fx;
+            document.getElementById('fovDoc').value = p.fy;
+            document.getElementById('mauDich').value = p.col;
+            document.getElementById('doMuot').value = p.sm;
+            document.getElementById('offsetY').value = p.oy;
+            document.getElementById('offsetX').value = p.ox;
+            document.querySelector('button[type="submit"]').classList.add('pulse');
+            setTimeout(()=>document.querySelector('button[type="submit"]').classList.remove('pulse'), 420);
+        }
+        btnLegit.addEventListener('click', ()=>{
+            applyPreset({
+                hk: 'x1', ct: 120, fx: 65, fy: 30, col: 'purple', sm: 12, oy: 4, ox: 0
+            });
+            showToast('Đã áp dụng Config Legit');
+        });
+        btnRage.addEventListener('click', ()=>{
+            applyPreset({
+                hk: 'x1', ct: 120, fx: 100, fy: 100, col: 'purple', sm: 1, oy: 3, ox: 0
+            });
+            showToast('Đã áp dụng Config Rage');
+        });
+        
+        // Nút ẩn/hiện console
+        let consoleHidden = false;
+        btnHideConsole.addEventListener('click', ()=>{
+            try {
+                // Gửi lệnh ẩn/hiện console qua API
+                fetch('/toggle-console', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: consoleHidden ? 'show' : 'hide' })
+                }).then(() => {
+                    consoleHidden = !consoleHidden;
+                    btnHideConsole.textContent = consoleHidden ? 'Hiện Console' : 'Ẩn Console';
+                    showToast(consoleHidden ? 'Đã ẩn console' : 'Đã hiện console');
+                }).catch(() => {
+                    showToast('Không thể điều khiển console', true);
+                });
+            } catch (e) {
+                showToast('Lỗi khi điều khiển console', true);
+            }
+        });
+
+        // Status Popup Functions
+        function showStatusPopup() {
+            const popup = document.getElementById('statusPopup');
+            popup.classList.add('show');
+        }
+
+        function closeStatusPopup() {
+            const popup = document.getElementById('statusPopup');
+            popup.classList.remove('show');
+        }
+
+        function updateStatus(status, type = 'working') {
+            const statusValue = document.querySelector('.status-value');
+            const statusIndicator = document.querySelector('.status-indicator');
+            
+            statusValue.textContent = status;
+            statusIndicator.className = `status-indicator ${type}`;
+        }
+
+        // Auto show popup when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(showStatusPopup, 1000); // Show after 1 second
+        });
+
+        // Auto hide popup after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const popup = document.getElementById('statusPopup');
+                if (popup.classList.contains('show')) {
+                    closeStatusPopup();
+                }
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
